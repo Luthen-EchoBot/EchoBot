@@ -1,5 +1,8 @@
 # GeiCar Project
 
+<details>
+<summary>Original description</summary>
+
 The GeiCar project is a project carried out by students at [INSA Toulouse](http://www.insa-toulouse.fr/fr/index.html). This project consists in developing the software of a autonomous car in order to carry out different missions. Several projects are exposed on the [official website](https://sites.google.com/site/projetsecinsa/).
 
 This repository is intended to provide a basis for students starting a new project on the GeiCar. The present code as well as the documentation is the result of internship carried out by [Alexis24](https://github.com/Alexix24) (Alexis Pierre Dit Lambert)
@@ -52,6 +55,7 @@ The projects are done by the following students:
 
 __warning__
 You normally do not need to change firmware running in F103 and F476 boards. You main work is on the raspberry and jetson side.
+</details>
 
 ## First commands for car control
 
@@ -121,3 +125,4 @@ source /opt/ros/humble/setup.bash
 2. Les WARNING de clock quand on fait un colcon build du pkg "interfaces" sont normaux
 3. Il faudra penser à mettre le ws avec celui du github pour ne plus être embéter par les nodes de l'an dernier
 4. Les executables à exécuter pour lancer la voiture doivent être rajouter dans geicar.launch.py dans geicar_start
+
