@@ -77,6 +77,7 @@ password  ``` geicar  ```
  ```
 goto_jetson
  ```
+
 This previous command is an alias equivalent to the command “sshpass -p jetson ssh jetson@192.168.1.10”
 
 *Launch the Docker
