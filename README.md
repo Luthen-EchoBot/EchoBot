@@ -90,4 +90,21 @@ sudo docker start -ai ros-humble
 ros2 launch geicar_start_jetson geicar.jetson.launch.py
  ```
 
+## Compile a new package
+1. Compilation of the "interfaces" package
+```sh
+cd ~/ros2_ws
+colcon build --packages-select interfaces
+```
+
+2. Then, compilation of the new package:
+```sh
+cd ~/ros2_ws
+colcon build --packages-select name_of_the_new_package
+
+3. After the compilation, source the ros environment:
+```sh
+source ~/ros2_ws/install/local_setup.bash
+source /opt/ros/humble/setup.bash
+```
 
