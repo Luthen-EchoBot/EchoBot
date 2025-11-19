@@ -101,11 +101,21 @@ colcon build --packages-select interfaces
 ```sh
 cd ~/ros2_ws
 colcon build --packages-select name_of_the_new_package
+```
 
 3. After the compilation, source the ros environment:
 ```sh
 source ~/ros2_ws/install/local_setup.bash
 source /opt/ros/humble/setup.bash
 ```
+## BUILD CLEAN 
 
-test 
+```
+ rm -rf build/ install/ log/
+ colcon build --packages-select interfaces
+ colcon build --packages-select can joystick car_control imu_tools system_check imu_filter_madgwick
+ colcon build --packages-select geicar_start
+ source ~/ros2_ws/install/local_setup.bash
+ source /opt/ros/humble/setup.bash
+ ros2 launch geicar_start geicar.launch.py
+```
