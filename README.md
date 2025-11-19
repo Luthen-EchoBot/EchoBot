@@ -90,26 +90,18 @@ sudo docker start -ai ros-humble
 ros2 launch geicar_start_jetson geicar.jetson.launch.py
  ```
 
-## Compile a new package
-1. Compilation of the "interfaces" package
+## Compile and run an executable
+Compilation of the "interfaces" package
 ```sh
-cd ~/ros2_ws
+cd ros2_ws
 colcon build --packages-select interfaces
-```
-
-2. Then, compilation of the new package:
-```sh
-cd ~/ros2_ws
-colcon build --packages-select name_of_the_new_package
-```
-
-3. After the compilation, source the ros environment:
-```sh
+colcon build --packages-select my_pkg
 source ~/ros2_ws/install/local_setup.bash
 source /opt/ros/humble/setup.bash
+ros2 run my_pkg my_executable
 ```
-## BUILD CLEAN 
 
+## BUILD CLEAN 
 ```
  rm -rf build/ install/ log/
  colcon build --packages-select interfaces
@@ -119,3 +111,13 @@ source /opt/ros/humble/setup.bash
  source /opt/ros/humble/setup.bash
  ros2 launch geicar_start geicar.launch.py
 ```
+
+## WARNING
+1. Le .bashrc a été modifié donc il faut tout le temps source le workspace (peut-être penser à faire un alias)
+``` sh
+source ~/ros2_ws/install/local_setup.bash
+source /opt/ros/humble/setup.bash
+```
+2. Les WARNING de clock quand on fait un colcon build du pkg "interfaces" sont normaux
+3. Il faudra penser à mettre le ws avec celui du github pour ne plus être embéter par les nodes de l'an dernier
+4. Les executables à exécuter pour lancer la voiture doivent être rajouter dans geicar.launch.py dans geicar_start
