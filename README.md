@@ -93,7 +93,7 @@ ros2 launch geicar_start_jetson geicar.jetson.launch.py
 ## Compile and run an executable
 Compilation of the "interfaces" package
 ```sh
-cd ros2_ws
+cd ~/ros2_ws
 colcon build --packages-select interfaces
 colcon build --packages-select my_pkg
 source ~/ros2_ws/install/local_setup.bash
