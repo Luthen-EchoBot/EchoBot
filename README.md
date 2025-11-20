@@ -96,8 +96,7 @@ Compilation of the "interfaces" package
 cd ~/ros2_ws
 colcon build --packages-select interfaces
 colcon build --packages-select my_pkg
-source ~/ros2_ws/install/local_setup.bash
-source /opt/ros/humble/setup.bash
+source_ws
 ros2 run my_pkg my_executable
 ```
 
@@ -107,16 +106,14 @@ ros2 run my_pkg my_executable
  colcon build --packages-select interfaces
  colcon build --packages-select can joystick car_control imu_tools system_check imu_filter_madgwick
  colcon build --packages-select geicar_start
- source ~/ros2_ws/install/local_setup.bash
- source /opt/ros/humble/setup.bash
+ source_ws
  ros2 launch geicar_start geicar.launch.py
 ```
 
 ## WARNING
-1. Le .bashrc a été modifié donc il faut tout le temps source le workspace (peut-être penser à faire un alias)
+1. Le .bashrc a été modifié donc il faut tout le temps source le workspace en utilisant un alias "source_ws"
 ``` sh
-source ~/ros2_ws/install/local_setup.bash
-source /opt/ros/humble/setup.bash
+source_ws
 ```
 2. Les WARNING de clock quand on fait un colcon build du pkg "interfaces" sont normaux
 3. Il faudra penser à mettre le ws avec celui du github pour ne plus être embéter par les nodes de l'an dernier
