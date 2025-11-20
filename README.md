@@ -114,6 +114,9 @@ ros2 run my_pkg my_executable
 1. Le .bashrc a été modifié donc il faut tout le temps source le workspace en utilisant un alias "source_ws"
 ``` sh
 source_ws
+# équivalent à
+source ~/ros2_ws/install/local_setup.bash
+source /opt/ros/humble/setup.bash
 ```
 2. Les WARNING de clock quand on fait un colcon build du pkg "interfaces" sont normaux
 3. Il faudra penser à mettre le ws avec celui du github pour ne plus être embéter par les nodes de l'an dernier
