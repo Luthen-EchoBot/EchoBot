@@ -7,6 +7,7 @@
 #include "interfaces/msg/motors_feedback.hpp"
 #include "interfaces/msg/steering_calibration.hpp"
 #include "interfaces/msg/joystick_order.hpp"
+#include "interfaces/msg/ultrasonic.hpp"
 
 #include "std_srvs/srv/empty.hpp"
 
@@ -17,6 +18,12 @@
 using namespace std;
 using placeholders::_1;
 
+int us_front=900;
+int us_front_right=900;
+int us_front_left=900;
+int us_rear=900;
+int us_rear_right=900;
+int us_rear_left=900;
 
 class car_control : public rclcpp::Node {
 
@@ -28,6 +35,7 @@ public:
         mode = 0;
         requestedThrottle = 0;
         requestedSteerAngle = 0;
+        
     
 
         publisher_can_= this->create_publisher<interfaces::msg::MotorsOrder>("motors_order", 10);
@@ -45,7 +53,8 @@ public:
         subscription_steering_calibration_ = this->create_subscription<interfaces::msg::SteeringCalibration>(
         "steering_calibration", 10, std::bind(&car_control::steeringCalibrationCallback, this, _1));
 
-
+        subscription_us_data_ = this->create_subscription<interfaces::msg::Ultrasonic>(
+        "us_data", 10, std::bind(&car_control::ultrasonicCallback, this, _1));
         
 
         server_calibration_ = this->create_service<std_srvs::srv::Empty>(
@@ -55,6 +64,7 @@ public:
 
         
         RCLCPP_INFO(this->get_logger(), "car_control_node READY");
+
     }
 
     
@@ -65,6 +75,16 @@ private:
     * This function is called when a message is published on the "/joystick_order" topic
     * 
     */
+
+    void ultrasonicCallback(const interfaces::msg::Ultrasonic & ultrasonic) {
+        us_front= ultrasonic.front_center;
+        us_front_right= ultrasonic.front_right;
+        us_front_left= ultrasonic.front_left;
+        us_rear= ultrasonic.rear_center;
+        us_rear_right= ultrasonic.rear_right;
+        us_rear_left= ultrasonic.rear_left;
+    }
+
     void joystickOrderCallback(const interfaces::msg::JoystickOrder & joyOrder) {
 
         if (joyOrder.start != start){
@@ -120,6 +140,11 @@ private:
 
         auto motorsOrder = interfaces::msg::MotorsOrder();
 
+        int d_stop= 40; 
+        int d_slowdown= 150;
+        int v_null= 50; 
+        float cmd=0;
+        
         if (!start){    //Car stopped
             leftRearPwmCmd = STOP;
             rightRearPwmCmd = STOP;
@@ -130,11 +155,32 @@ private:
 
             //Manual Mode
             if (mode==0){
-                
+
                 manualPropulsionCmd(requestedThrottle, reverse, leftRearPwmCmd,rightRearPwmCmd);
 
-                //steeringCmd(requestedSteerAngle,currentAngle, steeringPwmCmd);
+                // FRONT OBSTACLE 
+                if ((us_front <= d_stop || us_front_left <= d_stop || us_front_right <= d_stop) && reverse == false) {
+                    rightRearPwmCmd = v_null;
+                    leftRearPwmCmd = v_null;
+                }
+                else if (us_front <= d_slowdown && reverse == false) {
+                    cmd = requestedThrottle * (float(us_front) / float(d_slowdown - d_stop));
+                    leftRearPwmCmd = v_null + 50*cmd;
+                    rightRearPwmCmd = v_null + 50*cmd;
+                }
 
+                // REAR OBSTACLE 
+                if ((us_rear <= d_stop || us_rear_left <= d_stop || us_rear_right <= d_stop) && reverse == true) {
+                    rightRearPwmCmd = v_null;
+                    leftRearPwmCmd = v_null;
+                }
+                else if (us_rear <= d_slowdown && reverse == true) {
+                    cmd = requestedThrottle* (float(us_rear) / float(d_slowdown-d_stop));
+                    leftRearPwmCmd = v_null - 50*cmd;
+                    rightRearPwmCmd = v_null - 50*cmd;
+                } 
+
+                RCLCPP_INFO(this->get_logger(), "Vitesse: %d | Front distance: %d | Rear distance: %d  | CMD: %f", rightRearPwmCmd, us_front, us_rear, cmd);
 
             //Autonomous Mode
             } else if (mode==1){
@@ -236,6 +282,7 @@ private:
     rclcpp::Subscription<interfaces::msg::JoystickOrder>::SharedPtr subscription_joystick_order_;
     rclcpp::Subscription<interfaces::msg::MotorsFeedback>::SharedPtr subscription_motors_feedback_;
     rclcpp::Subscription<interfaces::msg::SteeringCalibration>::SharedPtr subscription_steering_calibration_;
+    rclcpp::Subscription<interfaces::msg::Ultrasonic>::SharedPtr subscription_us_data_;
 
     //Timer
     rclcpp::TimerBase::SharedPtr timer_;
