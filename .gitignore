@@ -49,10 +49,15 @@ fp-info-cache
 _autosave*
 
 # ROS2
-*.pyc
 build/
 install/
 log/
+
+# Python
+*.pyc
+__pycache__/
+
+*.swp
 
 # Freecad
 *.FCBak

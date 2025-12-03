@@ -157,28 +157,9 @@ private:
             if (mode==0){
 
                 manualPropulsionCmd(requestedThrottle, reverse, leftRearPwmCmd,rightRearPwmCmd);
-
-                // FRONT OBSTACLE 
-                if ((us_front <= d_stop || us_front_left <= d_stop || us_front_right <= d_stop) && reverse == false) {
-                    rightRearPwmCmd = v_null;
-                    leftRearPwmCmd = v_null;
-                }
-                else if (us_front <= d_slowdown && reverse == false) {
-                    cmd = requestedThrottle * (float(us_front) / float(d_slowdown - d_stop));
-                    leftRearPwmCmd = v_null + 50*cmd;
-                    rightRearPwmCmd = v_null + 50*cmd;
-                }
-
-                // REAR OBSTACLE 
-                if ((us_rear <= d_stop || us_rear_left <= d_stop || us_rear_right <= d_stop) && reverse == true) {
-                    rightRearPwmCmd = v_null;
-                    leftRearPwmCmd = v_null;
-                }
-                else if (us_rear <= d_slowdown && reverse == true) {
-                    cmd = requestedThrottle* (float(us_rear) / float(d_slowdown-d_stop));
-                    leftRearPwmCmd = v_null - 50*cmd;
-                    rightRearPwmCmd = v_null - 50*cmd;
-                } 
+                obstacleDetection2(requestedSteerAngle,requestedThrottle, reverse, leftRearPwmCmd, rightRearPwmCmd, us_front, us_front_right, us_front_left, us_rear, us_rear_right, us_rear_left);
+                
+                
 
                 RCLCPP_INFO(this->get_logger(), "Vitesse: %d | Front distance: %d | Rear distance: %d  | CMD: %f", rightRearPwmCmd, us_front, us_rear, cmd);
 

@@ -11,5 +11,6 @@
 * 
 */
 int * manualPropulsionCmd(float requestedThrottle, bool reverse, uint8_t& leftRearPwmCmd, uint8_t& rightRearPwmCmd);
-
+int * obstacleDetection1(float requestedThrottle, bool reverse, uint8_t& leftRearPwmCmd, uint8_t& rightRearPwmCmd,int us_front,int us_front_right,int us_front_left,int us_rear,int us_rear_right,int us_rear_left);
+int * obstacleDetection2(float& requestedSteerAngle, float requestedThrottle, bool reverse, uint8_t& leftRearPwmCmd, uint8_t& rightRearPwmCmd,int us_front,int us_front_right,int us_front_left,int us_rear,int us_rear_right,int us_rear_left);
 #endif /*__ propulsionCmd_H */
