@@ -126,3 +126,4 @@ source /opt/ros/humble/setup.bash
 3. Il faudra penser à mettre le ws avec celui du github pour ne plus être embéter par les nodes de l'an dernier
 4. Les executables à exécuter pour lancer la voiture doivent être rajouter dans geicar.launch.py dans geicar_start
 
+
