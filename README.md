@@ -106,12 +106,12 @@ ros2 run my_pkg my_executable
 
 ## BUILD CLEAN 
 ```
- rm -rf build/ install/ log/
- colcon build --packages-select interfaces
- colcon build --packages-select can joystick car_control imu_tools system_check imu_filter_madgwick
- colcon build --packages-select geicar_start
- source_ws
- ros2 launch geicar_start geicar.launch.py
+rm -rf build/ install/ log/
+colcon build --packages-select interfaces
+colcon build --packages-select can joystick car_control imu_tools system_check imu_filter_madgwick
+colcon build --packages-select geicar_start
+source_ws
+ros2 launch geicar_start geicar.launch.py
 ```
 
 ## WARNING
