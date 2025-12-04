@@ -22,6 +22,9 @@ set(msg_files
   "msg/Gnss.msg"
   "msg/SystemCheck.msg"
   "msg/ArduinoData.msg"
+  "msg/BBox.msg"
+  "msg/Gesture.msg"
+  "AI.msg"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}
