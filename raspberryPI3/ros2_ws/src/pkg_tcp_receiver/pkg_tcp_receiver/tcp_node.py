@@ -5,7 +5,7 @@ import pickle
 import threading
 import time
 
-from interfaces.msg import IA, BBox, Gesture
+from interfaces.msg import AI, BBox, Gesture
 
 from .ai_data_class import AI_Data, SOCKET_PORT, MAX_MSG_LEN
 
