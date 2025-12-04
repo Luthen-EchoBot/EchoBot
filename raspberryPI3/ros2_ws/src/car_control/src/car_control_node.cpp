@@ -24,6 +24,7 @@ int us_front_left=900;
 int us_rear=900;
 int us_rear_right=900;
 int us_rear_left=900;
+int is_stopped=0;
 
 class car_control : public rclcpp::Node {
 
@@ -35,6 +36,15 @@ public:
         mode = 0;
         requestedThrottle = 0;
         requestedSteerAngle = 0;
+
+        /* // PID params pour la direction
+        this->declare_parameter("kp_dir", 20.0);
+        this->declare_parameter("ki_dir", 0.0);
+        this->declare_parameter("kd_dir", 1.0);
+
+        this->get_parameter("kp_dir", kp_dir);
+        this->get_parameter("ki_dir", ki_dir);
+        this->get_parameter("kd_dir", kd_dir); */
         
     
 
@@ -75,6 +85,55 @@ private:
     * This function is called when a message is published on the "/joystick_order" topic
     * 
     */
+    // PID params
+    double kp_dir, ki_dir, kd_dir;
+    double min_angle_, max_angle_;
+    double kp_speed_, target_distance_;
+
+    void updatePID(float& requestedSteerAngle ,int us_front,int us_front_right,int us_front_left)
+    {
+        //double dt = 1.0/50; // ou calculé dynamiquement
+
+        
+        // Calculate horizontal error
+        float sum_lr = us_front_left + us_front_right;
+        if(sum_lr < 0.01) sum_lr = 0.01; // avoid division by zero
+        float error = (us_front_right - us_front_left) / sum_lr;
+
+        float output = 0 ;
+        
+        if(error > 1.0) {
+            output = 1.0;
+        }
+
+        else if(error < -1.0){
+            output = -1.0;
+        } 
+        else {
+            output = error ;
+        }
+        
+
+       /*  // PID calculation
+        integral_dir += error * dt;
+        float derivative = first_ ? 0.0f : (error - prev_error_dir) / dt;
+        first_ = false; */
+
+        /* loat output = kp_dir * error + ki_dir * integral_dir + kd_dir * derivative;
+
+        // Saturate to [-1,1]
+        if(output > 1.0f) {
+            output = 1.0f;
+        }
+
+        if(output < -1.0f){
+            output = -1.0f;
+        } 
+
+        prev_error_dir = error; */
+
+        requestedSteerAngle = output;
+    }
 
     void ultrasonicCallback(const interfaces::msg::Ultrasonic & ultrasonic) {
         us_front= ultrasonic.front_center;
@@ -155,13 +214,17 @@ private:
 
             //Manual Mode
             if (mode==0){
-
-                manualPropulsionCmd(requestedThrottle, reverse, leftRearPwmCmd,rightRearPwmCmd);
+                manualPropulsionCmd(requestedThrottle, reverse, leftRearPwmCmd, rightRearPwmCmd);
                 obstacleDetection2(requestedSteerAngle,requestedThrottle, reverse, leftRearPwmCmd, rightRearPwmCmd, us_front, us_front_right, us_front_left, us_rear, us_rear_right, us_rear_left);
-                
-                
+                if (leftRearPwmCmd == 0 && rightRearPwmCmd == 0) {
+                    is_stopped = 1;
+                }
+                if (is_stopped == 1) {
+                    autoBloque (is_stopped, us_front_left, us_front_right, requestedSteerAngle, leftRearPwmCmd, rightRearPwmCmd );
+                }
+                //updatePID(requestedSteerAngle , us_front, us_front_right, us_front_left);
 
-                RCLCPP_INFO(this->get_logger(), "Vitesse: %d | Front distance: %d | Rear distance: %d  | CMD: %f", rightRearPwmCmd, us_front, us_rear, cmd);
+                //RCLCPP_INFO(this->get_logger(), "Vitesse: %d | Front distance: %d | Rear distance: %d  | CMD: %f", rightRearPwmCmd, us_front, us_rear, cmd);
 
             //Autonomous Mode
             } else if (mode==1){

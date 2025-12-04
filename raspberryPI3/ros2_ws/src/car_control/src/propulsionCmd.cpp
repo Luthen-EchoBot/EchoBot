@@ -57,7 +57,7 @@ int * obstacleDetection1(float requestedThrottle, bool reverse, uint8_t& leftRea
 
 int * obstacleDetection2(float& requestedSteerAngle, float requestedThrottle, bool reverse, uint8_t& leftRearPwmCmd, uint8_t& rightRearPwmCmd,int us_front,int us_front_right,int us_front_left,int us_rear,int us_rear_right,int us_rear_left){
     // FRONT OBSTACLE 
-    int d_stop=40; 
+    int d_stop=20; 
     int d_slowdown=150;
     int d_obstacle2avoid=60;
     int v_null=50;
@@ -74,11 +74,86 @@ int * obstacleDetection2(float& requestedSteerAngle, float requestedThrottle, bo
         rightRearPwmCmd = v_null + 50*cmd;
     }
     if (us_front_left <= d_obstacle2avoid && us_front_left < us_front_right && reverse == false){
-        requestedSteerAngle = +1;
+        //requestedSteerAngle = +1;
+        float sum_lr = us_front_left + us_front_right;
+        if(sum_lr < 0.01) sum_lr = 0.01; // avoid division by zero
+        float error = (us_front_right - us_front_left) / sum_lr;
+
+        float output = 0 ;
+        
+        if(error > 1.0) {
+            output = 1.0;
+        }
+
+        else if(error < -1.0){
+            output = -1.0;
+        } 
+        else {
+            output = error ;
+        }
+        requestedSteerAngle = output;
     }
     else if (us_front_right <= d_obstacle2avoid && us_front_left > us_front_right && reverse == false){
-        requestedSteerAngle = -1;
+        //requestedSteerAngle = -1;
+        float sum_lr = us_front_left + us_front_right;
+        if(sum_lr < 0.01) sum_lr = 0.01; // avoid division by zero
+        float error = (us_front_right - us_front_left) / sum_lr;
+
+        float output = 0 ;
+        
+        if(error > 1.0) {
+            output = 1.0;
+        }
+
+        else if(error < -1.0){
+            output = -1.0;
+        } 
+        else {
+            output = error ;
+        }
+        requestedSteerAngle = output;
     }
+    //double dt = 1.0/50; // ou calculé dynamiquement
+
+        
+    // Calculate horizontal error
+    /* float sum_lr = us_front_left + us_front_right;
+    if(sum_lr < 0.01) sum_lr = 0.01; // avoid division by zero
+    float error = (us_front_right - us_front_left) / sum_lr;
+
+    float output = 0 ;
+    
+    if(error > 1.0) {
+        output = 1.0;
+    }
+
+    else if(error < -1.0){
+        output = -1.0;
+    } 
+    else {
+        output = error ;
+    } */
+    
+
+    /*  // PID calculation
+    integral_dir += error * dt;
+    float derivative = first_ ? 0.0f : (error - prev_error_dir) / dt;
+    first_ = false; */
+
+    /* loat output = kp_dir * error + ki_dir * integral_dir + kd_dir * derivative;
+
+    // Saturate to [-1,1]
+    if(output > 1.0f) {
+        output = 1.0f;
+    }
+
+    if(output < -1.0f){
+        output = -1.0f;
+    } 
+
+    prev_error_dir = error; */
+
+    //requestedSteerAngle = output;
 
     // REAR OBSTACLE 
     if (us_rear <= d_stop && reverse == true) {
@@ -90,14 +165,48 @@ int * obstacleDetection2(float& requestedSteerAngle, float requestedThrottle, bo
         leftRearPwmCmd = v_null - 50*cmd;
         rightRearPwmCmd = v_null - 50*cmd;
     } 
-    if (us_rear_left <= d_obstacle2avoid && us_rear_left < us_rear_right && reverse == true){
+    /* if (us_rear_left <= d_obstacle2avoid && us_rear_left < us_rear_right && reverse == true){
         requestedSteerAngle = +1;
     }
     else if (us_rear_right <= d_obstacle2avoid && us_rear_left > us_rear_right && reverse == true ){
         requestedSteerAngle = -1;
     }
-
+ */
     //RCLCPP_INFO(this->get_logger(), "Vitesse: %d | Front distance: %d | Rear distance: %d  | CMD: %f", rightRearPwmCmd, us_front, us_rear, cmd);
+    
+    
+    
+    
+    
     return 0;
 
 }
+
+
+void autoBloque (int& is_stopped, int us_front_left, int us_front_right, float& requestedSteerAngle, uint8_t& leftRearPwmCmd, uint8_t& rightRearPwmCmd ) {
+    int dist_min = 60;
+
+    if (us_front_left < dist_min && us_front_right > us_front_left) {
+        requestedSteerAngle = -1;
+        leftRearPwmCmd = 25;
+        rightRearPwmCmd = 25;
+    }
+    else if (us_front_right < dist_min && us_front_left > us_front_right) {
+        requestedSteerAngle = 1;
+        leftRearPwmCmd = 25;
+        rightRearPwmCmd = 25;
+    }
+    else {
+        is_stopped = 0;
+    }
+    
+
+}
+
+
+
+
+
+
+
+
