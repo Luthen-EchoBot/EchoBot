@@ -7,6 +7,17 @@ import time
 
 from interfaces.msg import AI, BBox, Gesture
 
+import sys  # <--- Needed for the fix
+
+################# EXPRIMENTAL ##############
+# 1. Import the class locally from your package
+from . import ai_data_class
+
+# 2. Force Python to recognize 'ai_data_class' as a top-level module
+# This tricks pickle into finding the class definition where the sender expects it.
+sys.modules['ai_data_class'] = ai_data_class
+############### END OF EXPERIMENTAL ########
+
 from .ai_data_class import AI_Data, SOCKET_PORT, MAX_MSG_LEN
 
 class TcpReceiverNode(Node):
@@ -14,10 +25,10 @@ class TcpReceiverNode(Node):
         super().__init__('tcp_receiver_node')
         
         # Publisher
-        self.publisher_ = self.create_publisher(IA, 'ai_perception_data', 10)
+        self.publisher_ = self.create_publisher(AI, 'ai_perception_data', 10)
         
         # TCP Configuration
-        self.host = 'localhost'
+        self.host = '192.168.1.1'
         self.port = SOCKET_PORT
         self.running = True
 
@@ -77,39 +88,44 @@ class TcpReceiverNode(Node):
             except ConnectionResetError:
                 break
 
-    def process_and_publish(self, python_obj):
+    def process_and_publish(self, ai_data_obj):
         """
         Maps the Python object to the ROS 2 message and publishes it.
         """
-        msg = IA()
+        msg = AI()
         
         # --- MAPPING LOGIC START ---
-        if hasattr(python_obj, 'gesture_data'):
-            msg.gesture.class_name = python_obj.gesture_data.get('name', 'none')
-            msg.gesture.id = int(python_obj.gesture_data.get('id', -1))
-            msg.gesture.probability = float(python_obj.gesture_data.get('probability', 0.0))
+        if hasattr(ai_data_obj, 'gesture_data') and ai_data_obj.gesture_data is not None:
+            msg.gesture.class_name = str(ai_data_obj.gesture_data.class_name)
+            msg.gesture.id = int(ai_data_obj.gesture_data.id)
+            msg.gesture.probability = float(ai_data_obj.gesture_data.probability)
+        else:
+            # Default values if no gesture data
+            msg.gesture.class_name = "none"
+            msg.gesture.id = -1
+            msg.gesture.probability = 0.0
 
         # Mapping for Boxes:
         temp_bbox_list = []
-        if hasattr(python_obj, 'detections'):
-            for i, det in enumerate(python_obj.detections):
+        if hasattr(ai_data_obj, 'detections'):
+            for i, det in enumerate(ai_data_obj.detections):
                 # if i >= 16: break # Safety cap                
                 bbox = BBox()
-                bbox.x = int(det.get('x', 0))
-                bbox.y = int(det.get('y', 0))
-                bbox.w = int(det.get('w', 0))
-                bbox.h = int(det.get('h', 0))
-                bbox.id = int(det.get('id', -1))
-                bbox.probability = float(det.get('probability', 0.0))
-                bbox.estimated_distance = float(det.get('estimated_distance', 0.0))
-                bbox.class_name = str(det.get('class_name', 'unknown'))
+                bbox.x = int(det.x)
+                bbox.y = int(det.y)
+                bbox.w = int(det.w)
+                bbox.h = int(det.h)
+                bbox.id = int(det.id)
+                bbox.probability = float(det.probability)
+                bbox.estimated_distance = float(det.estimated_distance)
+                bbox.class_name = str(det.class_name)
                 
                 temp_bbox_list.append(bbox)
         msg.boxes = temp_bbox_list
         # --- MAPPING LOGIC END ---
 
         self.publisher_.publish(msg)
-        self.get_logger().debug(f'Published IA message with {len(temp_bbox_list)} boxes')
+        self.get_logger().debug(f'Published AI message with {len(temp_bbox_list)} boxes')
 
 def main(args=None):
     rclpy.init(args=args)

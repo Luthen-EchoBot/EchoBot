@@ -1,6 +1,6 @@
 class Gesture_Data:
     def __init__(self,class_name,ID,probability):
-        self.name=class_name
+        self.class_name=class_name
         self.id=ID
         self.probability=probability
 
@@ -12,7 +12,7 @@ class Detection:
         self.h = h
         self.id=id
         self.probability=probability
-        self.dist=estimated_distance
+        self.estimated_distance=estimated_distance
         self.class_name=class_name
 
 class AI_Data:
