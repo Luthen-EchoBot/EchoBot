@@ -91,6 +91,7 @@ def generate_launch_description():
     ld.add_action(system_check_node)
     ld.add_action(state_controller_node)
     ld.add_action(arduino_reader_node)
+    ld.add_action(gui_data_sender_node)
 
 
     return ld
