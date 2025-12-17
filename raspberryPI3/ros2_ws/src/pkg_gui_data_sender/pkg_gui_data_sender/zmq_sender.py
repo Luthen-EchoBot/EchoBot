@@ -6,6 +6,8 @@ import threading
 import time
 import zmq
 
+from interfaces.msg import State, ArduinoData
+
 ZMQ_PORT = 5555
 UPDATES_PER_SECOND = 2.0
 
@@ -28,26 +30,26 @@ class ZmqSenderNode(Node):
         # 2. Shared Data
         self.lock = threading.Lock()
         self.latest_data = {
-            "speed": 0.0,
-            "steering": 0,
             "state": "Initializing...",
-            "battery": 0
+            "tempeture": 0,
+            "humidity": 0
         }
 
         # 3. ROS 2 Subscriptions
-        self.create_subscription(Int32, '/state', self.state_callback, 10)
-        # self.create_subscription(String, '/car/status', self.status_callback, 10)
+        self.create_subscription(State, '/state', self.state_callback, 10)
+        self.create_subscription(ArduinoData, '/arduino_data', self.arduino_callback, 10)
 
         # 4. Transmission Timer
         self.timer = self.create_timer(1.0/UPDATES_PER_SECOND, self.publish_to_gui)
 
-    # def speed_callback(self, msg):
-    #     with self.lock:
-    #         self.latest_data['speed'] = msg.data
-   
-    def state_callback(self, msg):
+    def state_callback(self, data):
         with self.lock:
-            self.latest_data['state'] = msg.data
+            self.latest_data['state'] = data.state
+
+    def arduino_callback(self, data):
+        with self.lock:
+            self.latest_data['tempeture'] = data.temp
+            self.latest_data['humidity'] = data.humidity
 
     # --- Sender Loop ---
     def publish_to_gui(self):
