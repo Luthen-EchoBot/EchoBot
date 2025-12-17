@@ -30,8 +30,8 @@ class ZmqSenderNode(Node):
         # 2. Shared Data
         self.lock = threading.Lock()
         self.latest_data = {
-            "state": "Initializing...",
-            "tempeture": 0,
+            "state": 0,
+            "temperature": 0,
             "humidity": 0
         }
 
@@ -48,7 +48,7 @@ class ZmqSenderNode(Node):
 
     def arduino_callback(self, data):
         with self.lock:
-            self.latest_data['tempeture'] = data.temp
+            self.latest_data['temperature'] = data.temp
             self.latest_data['humidity'] = data.humidity
 
     # --- Sender Loop ---
