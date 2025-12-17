@@ -21,7 +21,8 @@
   <exec_depend>system_check</exec_depend>
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>pkg_tcp_receiver</exec_depend>
-
+  <exec_depend>pkg_state_control</exec_depend>
+  <exec_depend>pkg_gui_data_sender</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

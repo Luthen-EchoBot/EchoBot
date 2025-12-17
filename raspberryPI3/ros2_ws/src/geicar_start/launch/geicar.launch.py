@@ -40,10 +40,31 @@ def generate_launch_description():
         package="pkg_tcp_receiver",
         executable="tcp_receiver",
         name="tcp_receiver_node",
-        output="screen", # to see the "Connected" prints in the terminal
+        output="screen",
         emulate_tty=True
     )
 
+    gui_data_sender_node = Node(
+        package="pkg_gui_data_sender",
+        executable="gui_data_sender",
+        name="gui_data_sender_node",
+        output="screen",
+        emulate_tty=True
+    )
+
+    state_controller_node = Node(
+        package="pkg_state_control",
+        executable="state_control",
+        name="state_control_node",
+        emulate_tty=True
+    )
+
+    arduino_reader_node = Node(
+        package="pkg_arduino",
+        executable="arduino_reader",
+        name="arduino_reader_node",
+        emulate_tty=True
+    )
 
     config_dir = os.path.join(get_package_share_directory('imu_filter_madgwick'), 'config')
 
@@ -54,13 +75,11 @@ def generate_launch_description():
         emulate_tty=True
     )
 
-
     system_check_node = Node(
         package="system_check",
         executable="system_check_node",
         emulate_tty=True
     )
-
 
     ld.add_action(joystick_node)
     ld.add_action(joystick_to_cmd_node)
@@ -70,5 +89,8 @@ def generate_launch_description():
     ld.add_action(tcp_receiver_node)
     ld.add_action(imu_filter_madgwick_node)
     ld.add_action(system_check_node)
+    ld.add_action(state_controller_node)
+    ld.add_action(arduino_reader_node)
+
 
     return ld
