@@ -6,7 +6,7 @@ import threading
 import time
 import zmq
 
-from interfaces.msg import State, ArduinoData
+from interfaces.msg import State, ArduinoData, AI, FollowingStateEvent
 
 ZMQ_PORT = 5555
 UPDATES_PER_SECOND = 2.0
@@ -32,12 +32,16 @@ class ZmqSenderNode(Node):
         self.latest_data = {
             "state": 0,
             "temperature": 0,
-            "humidity": 0
+            "humidity": 0,
+            "gesture": "none",
+            "following_state": -1
         }
 
         # 3. ROS 2 Subscriptions
         self.create_subscription(State, '/state', self.state_callback, 10)
         self.create_subscription(ArduinoData, '/arduino_data', self.arduino_callback, 10)
+        self.create_subscription(AI, '/ai_perception_data', self.gesture_callback, 10)
+        self.create_subscription(FollowingStateEvent, '/following_state_event', self.following_state_callback, 10)
 
         # 4. Transmission Timer
         self.timer = self.create_timer(1.0/UPDATES_PER_SECOND, self.publish_to_gui)
@@ -51,12 +55,22 @@ class ZmqSenderNode(Node):
             self.latest_data['temperature'] = data.temp
             self.latest_data['humidity'] = data.humidity
 
+    def gesture_callback(self, data):
+        with self.lock:
+            self.latest_data['gesture'] = data.gesture.class_name
+
+    def following_state_callback(self, data):
+        with self.lock:
+            self.latest_data['following_state'] = data.state
+
     # --- Sender Loop ---
     def publish_to_gui(self):
         try:
             with self.lock:
                 # Thread safety
                 data_to_send = self.latest_data.copy()
+            
+            #self.get_logger().info(f"Envoi ZMQ : {data_to_send}")
             self.socket.send_pyobj(data_to_send, flags=zmq.NOBLOCK)
         except zmq.Again: # buffer is full
             pass

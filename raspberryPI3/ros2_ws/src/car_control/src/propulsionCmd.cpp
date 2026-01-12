@@ -55,11 +55,38 @@ int * obstacleDetection1(float requestedThrottle, bool reverse, uint8_t& leftRea
 
 }
 
+//Retourne le steering angle pour suivre la personne
+float suivreHumain (int x, int w) {
+    float box_centerx = 0.0;
+    box_centerx = float(x)-(float(w)/2.0);
+
+    float screen_centerx = 320.0; 
+    float error = - box_centerx + screen_centerx;
+    float error_normalized = error / screen_centerx;
+
+    float output = - error_normalized + 0.8;
+
+    if (output > 1.0) {
+        output = 1.0;
+    }
+    else if (output < -1.0) {
+        output = -1.0;
+    }
+    
+    return output;
+
+}
+
+
+
+
+
+
 int * obstacleDetection2(float& requestedSteerAngle, float requestedThrottle, bool reverse, uint8_t& leftRearPwmCmd, uint8_t& rightRearPwmCmd,int us_front,int us_front_right,int us_front_left,int us_rear,int us_rear_right,int us_rear_left){
     // FRONT OBSTACLE 
-    int d_stop=20; 
+    int d_stop=50; 
     int d_slowdown=150;
-    int d_obstacle2avoid=60;
+    int d_obstacle2avoid=70;
     int v_null=50;
     float cmd=0;
 
@@ -108,52 +135,15 @@ int * obstacleDetection2(float& requestedSteerAngle, float requestedThrottle, bo
         else if(error < -1.0){
             output = -1.0;
         } 
+/*         else if (error < 0.1 || error > 0.1) { //A ENLEVER PEUT ETRE
+            output = output;
+        } */
         else {
-            output = error ;
+            output = error;
         }
         requestedSteerAngle = output;
     }
-    //double dt = 1.0/50; // ou calculé dynamiquement
-
-        
-    // Calculate horizontal error
-    /* float sum_lr = us_front_left + us_front_right;
-    if(sum_lr < 0.01) sum_lr = 0.01; // avoid division by zero
-    float error = (us_front_right - us_front_left) / sum_lr;
-
-    float output = 0 ;
     
-    if(error > 1.0) {
-        output = 1.0;
-    }
-
-    else if(error < -1.0){
-        output = -1.0;
-    } 
-    else {
-        output = error ;
-    } */
-    
-
-    /*  // PID calculation
-    integral_dir += error * dt;
-    float derivative = first_ ? 0.0f : (error - prev_error_dir) / dt;
-    first_ = false; */
-
-    /* loat output = kp_dir * error + ki_dir * integral_dir + kd_dir * derivative;
-
-    // Saturate to [-1,1]
-    if(output > 1.0f) {
-        output = 1.0f;
-    }
-
-    if(output < -1.0f){
-        output = -1.0f;
-    } 
-
-    prev_error_dir = error; */
-
-    //requestedSteerAngle = output;
 
     // REAR OBSTACLE 
     if (us_rear <= d_stop && reverse == true) {
@@ -183,21 +173,85 @@ int * obstacleDetection2(float& requestedSteerAngle, float requestedThrottle, bo
 }
 
 
-void autoBloque (int& is_stopped, int us_front_left, int us_front_right, float& requestedSteerAngle, uint8_t& leftRearPwmCmd, uint8_t& rightRearPwmCmd ) {
-    int dist_min = 60;
+/* float Steercalculation (int us_front_left, int us_front_right, int us_rear_right, int us_rear_left){
+    float sum_lr = us_front_left + us_front_right;
+    if(sum_lr < 0.01) sum_lr = 0.01; // avoid division by zero
+    float error = (float)(us_front_right - us_front_left) / sum_lr;
 
-    if (us_front_left < dist_min && us_front_right > us_front_left) {
-        requestedSteerAngle = -1;
+    float output = 0 ;
+    
+    if(error > 1.0) {
+        output = 1.0;
+    }
+
+    else if(error < -1.0){
+        output = -1.0;
+    } 
+    else {
+        output = error ;
+    }
+    return output ;
+} */
+
+void autoBloque (int& is_stopped, int us_front_left, int us_front_right, int us_rear_right, int us_rear_left, int us_rear, float& requestedSteerAngle, uint8_t& leftRearPwmCmd, uint8_t& rightRearPwmCmd ) {
+    int dist_min_avance = 30;
+    int dist_min_recule = 40;
+    int manouvre_finished_cpt;
+    int turn_left = 0;
+
+    if (us_front_left < dist_min_recule && us_front_right > us_front_left) {
+        requestedSteerAngle = -0.6;
         leftRearPwmCmd = 25;
         rightRearPwmCmd = 25;
+        turn_left = 1;
     }
-    else if (us_front_right < dist_min && us_front_left > us_front_right) {
-        requestedSteerAngle = 1;
+    else if (us_front_right < dist_min_recule && us_front_left > us_front_right) {
+        requestedSteerAngle = 0.6;
         leftRearPwmCmd = 25;
         rightRearPwmCmd = 25;
+        turn_left = 0;
     }
+
+/*     if (us_rear_right < dist_min_avance && (float)us_rear_left > 1.75*(float)us_rear_right) {
+        requestedSteerAngle = -0.6;
+ 
+        leftRearPwmCmd = 60;
+        rightRearPwmCmd = 60;
+    }
+    else if (us_rear_left < dist_min_avance && (float)us_rear_right > 1.75*(float)us_rear_left) {
+        requestedSteerAngle = 0.6;
+
+        leftRearPwmCmd = 60;
+        rightRearPwmCmd = 60;
+    }
+ */
+
+/*     if (us_rear_right < dist_min_avance || us_rear_left < dist_min_avance){
+        leftRearPwmCmd = 70;
+        rightRearPwmCmd = 70;        
+        if ((float)us_rear_left > 1.75*(float)us_rear_right) {
+            requestedSteerAngle = -0.6;
+        }
+        else if (us_rear_left < dist_min_avance && (float)us_rear_right > 1.75*(float)us_rear_left) {
+            requestedSteerAngle = 0.6;
+        }
+    } */
+
     else {
         is_stopped = 0;
+       /*  if (manouvre_finished_cpt == 1000 && turn_left == 1) {
+            manouvre_finished_cpt = 0;
+            requestedSteerAngle = 0.6;
+            leftRearPwmCmd = 70;
+            rightRearPwmCmd = 70;        
+        }
+        else if (manouvre_finished_cpt == 1000 && turn_left == 0) {
+            manouvre_finished_cpt = 0;
+            requestedSteerAngle = -0.6;
+            leftRearPwmCmd = 70;
+            rightRearPwmCmd = 70; //ENELEVER TOUT C PEUT ETRE
+        }
+        manouvre_finished_cpt =+ 1; */
     }
     
 

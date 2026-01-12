@@ -26,6 +26,7 @@ set(msg_files
   "msg/Gesture.msg"
   "msg/AI.msg"
   "msg/State.msg"
+  "msg/FollowingStateEvent.msg"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}

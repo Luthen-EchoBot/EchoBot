@@ -43,21 +43,13 @@ class StateControl(Node):
         print(f"État actuel : {self.state}")
 
         # 2. Appliquer la logique de changement d'état
-        if rfid_status == 0:
+        if rfid_status == 0 or rfid_status == 2:
             # 0 -> ne change pas le mode
             pass # L'état reste le même
         elif rfid_status == 1:
             # 1 -> fais changer de mode
             if self.state == self.STOP_MODE:
                 self.state = self.RUN_MODE
-            elif self.state == self.RUN_MODE:
-                self.state = self.STOP_MODE
-        elif rfid_status == 2:
-            # 2 -> dans STOP MODE, ne fait pas changer de mode
-            if self.state == self.STOP_MODE:
-                pass # L'état reste STOP MODE
-            
-            # 2 -> dans RUN MODE, passe en STOP MODE
             elif self.state == self.RUN_MODE:
                 self.state = self.STOP_MODE
         else:

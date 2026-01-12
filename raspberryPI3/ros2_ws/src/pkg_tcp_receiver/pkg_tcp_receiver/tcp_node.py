@@ -11,7 +11,7 @@ import sys  # <--- Needed for the fix
 
 ################# EXPRIMENTAL ##############
 # 1. Import the class locally from your package
-from . import ai_data_class
+from . import ai_data_class 
 
 # 2. Force Python to recognize 'ai_data_class' as a top-level module
 # This tricks pickle into finding the class definition where the sender expects it.
@@ -105,7 +105,7 @@ class TcpReceiverNode(Node):
             msg.gesture.id = -1
             msg.gesture.probability = 0.0
 
-        # Mapping for Boxes:
+        # Mapping for Boxes: 
         temp_bbox_list = []
         if hasattr(ai_data_obj, 'detections'):
             for i, det in enumerate(ai_data_obj.detections):
