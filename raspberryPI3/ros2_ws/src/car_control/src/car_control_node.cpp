@@ -23,17 +23,6 @@
 using namespace std;
 using placeholders::_1;
 
-struct BBox {
-    std::string class_name;
-    int32_t x;
-    int32_t y;
-    int32_t w;
-    int32_t h;
-    int32_t id;
-    float probability;
-    float estimated_distance;
-};
-
 int us_front=900;
 int us_front_right=900;
 int us_front_left=900;
@@ -43,7 +32,7 @@ int us_rear_left=900;
 int is_stopped=0;
 
 int timer = 0;
-
+float past_steering_angle = 0.0 ;
 int ai_x = 0;
 int ai_y = 0;
 int ai_w = 0;
@@ -52,15 +41,11 @@ std::string ai_class_name = "person";
 int ai_id = 0 ;
 float ai_proba = 0.0;
 float ai_estimated_distance = 0.0 ;
-std::vector<int> ai_id_table ;
-std::vector<BBox> local_bbox_table;
 
 int car_state = 1;
 bool follow_mode = false;      // false -> No follow, true -> Follow master
 int following_id = -1;         // ID de la personne suivie
 int follow_state = 1;          // 1 -> Looking for a master, 2 -> Master found, waiting for gestures, 3 -> Following master
-int ban_id = -1;               // Enregistre la valeur de following id lorsque le master fait le geste victory
-int index_following_id = 0;
 std::string following_state_event = "none";
 
 int gesture_id = -1 ;
@@ -107,6 +92,8 @@ public:
         server_calibration_ = this->create_service<std_srvs::srv::Empty>(
                             "steering_calibration", std::bind(&car_control::steeringCalibration, this, std::placeholders::_1, std::placeholders::_2));
 
+	// timer_following_update_ = this->create_wall_timer(std::chrono::milliseconds(250), [&](){this->publishingFollowingState();};
+	
         timer_ = this->create_wall_timer(PERIOD_UPDATE_CMD, std::bind(&car_control::updateCmd, this));
 
         
@@ -120,50 +107,20 @@ private:
 
     void AICallback(const interfaces::msg::AI & AI){
         int i = 0;
-        local_bbox_table.clear();
         
         if (AI.boxes.empty()) {
         RCLCPP_INFO(this->get_logger(), "No human detected");
-        ai_id_table.clear();
+        following_id = -1 ;
         }
         else{
-
-            ai_id_table.clear();
-            for (const auto & box : AI.boxes) {
-                ai_id_table.push_back(box.id);
-            }
-
-            for (const auto & ros_box : AI.boxes) {
-                // BBox temp_box; // Création d'une boite temporaire
-
-                // Copie champ par champ
-                /* temp_box.class_name = ros_box.class_name;
-                temp_box.x = ros_box.x;
-                temp_box.y = ros_box.y;
-                temp_box.w = ros_box.w;
-                temp_box.h = ros_box.h;
-                temp_box.id = ros_box.id;
-                temp_box.probability = ros_box.probability;
-                temp_box.estimated_distance = ros_box.estimated_distance; */
-
-                // Ajout de la boite remplie dans votre tableau
-                local_bbox_table.push_back(ros_box);
-            }
-
-            for (int i=0;i<local_bbox_table.size();i++) {
-                if (local_bbox_table[i] != ban_id){
-                    following_id = local_bbox_table[i].id;
-                }
-            } 
-
-            ai_x = AI.boxes[index_following_id].x;
-            ai_y = AI.boxes[index_following_id].y;
-            ai_w = AI.boxes[index_following_id].w ;
-            ai_h = AI.boxes[index_following_id].h ;
-            ai_class_name = AI.boxes[index_following_id].class_name;
-            ai_id = AI.boxes[index_following_id].id ;
-            ai_proba = AI.boxes[index_following_id].probability;
-            ai_estimated_distance = AI.boxes[index_following_id].estimated_distance ;
+            ai_x = AI.boxes[i].x;
+            ai_y = AI.boxes[i].y;
+            ai_w = AI.boxes[i].w ;
+            ai_h = AI.boxes[i].h ;
+            ai_class_name = AI.boxes[i].class_name;
+            ai_id = AI.boxes[i].id ;
+            ai_proba = AI.boxes[i].probability;
+            ai_estimated_distance = AI.boxes[i].estimated_distance ;
 
             gesture_id = AI.gesture.id ;
             gesture_name = AI.gesture.class_name;
@@ -259,75 +216,42 @@ private:
 
         }else{ //Car started
 
-            //Manual Mode
+            //Manual Mode <==> MODE DE FONCTIONNEMENT à l'ARRET
             if (mode==0){
-                if (car_state == 1) {
-                    manualPropulsionCmd(requestedThrottle, reverse, leftRearPwmCmd, rightRearPwmCmd);
-                    if (leftRearPwmCmd == 50 && rightRearPwmCmd == 50) {
-                        is_stopped = 1;
-                    }
-                    if (is_stopped == 1) {
-                        autoBloque (is_stopped, us_front_left, us_front_right, us_rear_right, us_rear_left, us_rear, requestedSteerAngle, leftRearPwmCmd, rightRearPwmCmd );
-                    }
-                    obstacleDetection2(requestedSteerAngle,requestedThrottle, reverse, leftRearPwmCmd, rightRearPwmCmd, us_front, us_front_right, us_front_left, us_rear, us_rear_right, us_rear_left);
-                    RCLCPP_INFO(this->get_logger(), "Gesture : %s", gesture_name.c_str());
-
-                } else {
-                    requestedSteerAngle = 0;
-                    leftRearPwmCmd = 50;
-                    rightRearPwmCmd = 50;
-                }
-
-            //Autonomous Mode
-            } else if (mode==1){
-
+                
                 // Run mode
                 if (car_state == 1) {
 
                     // Réaction à la perte de l'id du master car le master est sortie du champs de vision de la caméra
                     if (ai_id != following_id and following_id != -1) {
-                        RCLCPP_INFO(this->get_logger(), "Master lost!");
+                        //RCLCPP_INFO(this->get_logger(), "Master lost!");
                         following_id = -1; // Aucun id n'est suivi
                         follow_mode = 1; // Pas de suivi
                         follow_state = 1; // Looking for a master
+                        leftRearPwmCmd = 50; // Mode de fonctionnement à l'arret
+                        rightRearPwmCmd = 50; // Mode de fonctionnement à l'arret
                         if (following_state_event == "none") {
                             following_state_event = "master_lost";
                         }
                     }
 
                     if (following_id == -1) { // Aucun humain n'est le master
-                        RCLCPP_INFO(this->get_logger(), "Looking for a master...");
+                        //RCLCPP_INFO(this->get_logger(), "Looking for a master...");
                         follow_state = 1; // Looking for a master
                         follow_mode = false; // Pas de suivi
-                        if (ai_id_table[0] != -1 and ai_id_table[0] != ban_id) {
-                            following_id = ai_id_table[0];
-                        } else if (ai_id_table[0] != -1 and ai_id_table[0] == ban_id) {
-                            following_id = ai_id_table[1];
-                        }
+                        leftRearPwmCmd = 50; // Mode de fonctionnement à l'arret
+                        rightRearPwmCmd = 50; // Mode de fonctionnement à l'arret
+                        if (ai_id != -1) {
+                            following_id = ai_id;
+                        } 
                         if (following_state_event == "none") {
                             following_state_event = "looking_for_master";
                         }
                     } else {
-/* 
-                        for (size_t i = 0; i < local_bbox_table.size(); ++i) {
-                             if (local_bbox_table[i].id == following_id) {
-                                index_following_id = i; // On stocke la position de la bonne boîte
-                                break;            // On arrête de chercher, on l'a trouvé
-                            }
-                        }
-
-                        ai_x = local_bbox_table[index_following_id].x;
-                        ai_y = local_bbox_table[index_following_id].y;
-                        ai_w = local_bbox_table[index_following_id].w ;
-                        ai_h = local_bbox_table[index_following_id].h ;
-                        ai_class_name = local_bbox_table[index_following_id].class_name;
-                        ai_id = local_bbox_table[index_following_id].id ;
-                        ai_proba = local_bbox_table[index_following_id].probability;
-                        ai_estimated_distance = local_bbox_table[index_following_id].estimated_distance ; */
 
                         if (follow_mode == false) {
                             follow_state = 2; // Master found, waiting for gestures from the master
-                            RCLCPP_INFO(this->get_logger(), "Waiting for gestures from the detected master...");
+                            //RCLCPP_INFO(this->get_logger(), "Waiting for gestures from the detected master...");
                             if (following_state_event == "none") {
                                 following_state_event = "waiting_for_gestures";
                             }
@@ -337,27 +261,23 @@ private:
                             if (gesture_name == "Victory") {
                                 follow_mode=false; // On arrête à suivre le master
                                 follow_state = 1; // Master found, waiting for gestures from the master
-                                ban_id=following_id;
                                 following_id = -1;
-                                RCLCPP_INFO(this->get_logger(), "Changing master!");
+                                //RCLCPP_INFO(this->get_logger(), "Changing master!");
                                 if (following_state_event == "none") {
                                     following_state_event = "change_master";
                                 }
 
-                            
-
-
                             } else if (gesture_name == "Thumb_Up") {
                                 follow_mode=false; // On met la voiture en STOP
                                 follow_state = 2; // Master found, waiting for gestures from the master
-                                RCLCPP_INFO(this->get_logger(), "Stop to follow master!");
+                                //RCLCPP_INFO(this->get_logger(), "Stop to follow master!");
                                 if (following_state_event == "none") {
                                     following_state_event = "stop_following";
                                 }
                             } else if (gesture_name == "Pointing_Up" and follow_mode==false) {
                                 follow_mode=true; // On commence à suivre le master
                                 follow_state = 3; // Follow master
-                                RCLCPP_INFO(this->get_logger(), "Starting to follow master!");
+                                //RCLCPP_INFO(this->get_logger(), "Starting to follow master!");
                                 if (following_state_event == "none") {
                                     following_state_event = "following_master";
                                 }
@@ -367,13 +287,147 @@ private:
 
                     // Activation du suivi du master avec le booléen follow_mode
                     if (follow_mode) {
-                        RCLCPP_INFO(this->get_logger(), "Following master");
+                        //RCLCPP_INFO(this->get_logger(), "Following master");
+                        follow_state = 3; // Follow master
+                        // NE PAS MODIFIER - // MODE DE FONCTIONNEMENT à l'ARRET
+                        leftRearPwmCmd = 50; // Mode de fonctionnement à l'arret
+                        rightRearPwmCmd = 50; // Mode de fonctionnement à l'arret
+                        requestedThrottle = 0;
+                        
+                        requestedSteerAngle = suivreHumain(ai_x, ai_w);
+                        
+                        // On refait une saturation
+                        if (requestedSteerAngle > 1.0) {
+                            requestedSteerAngle = 1.0;
+                        }
+                        else if (requestedSteerAngle < -1.0) {
+                            requestedSteerAngle = -1.0;
+                        }
+
+                    } else {
+                        requestedSteerAngle = 0;
+                        leftRearPwmCmd = 50;
+                        rightRearPwmCmd = 50;
+                    }
+                
+                // Stop mode
+                } else {
+                    requestedSteerAngle = 0;
+                    leftRearPwmCmd = 50;
+                    rightRearPwmCmd = 50;
+                }
+
+                // ## Ancienne version du mode manuel ##
+                //
+                // if (car_state == 1) {
+                //     manualPropulsionCmd(requestedThrottle, reverse, leftRearPwmCmd, rightRearPwmCmd);
+                //     if (leftRearPwmCmd == 50 && rightRearPwmCmd == 50) {
+                //         is_stopped = 1;
+                //     }
+                //     if (is_stopped == 1) {
+                //         autoBloque (is_stopped, us_front_left, us_front_right, us_rear_right, us_rear_left, us_rear, requestedSteerAngle, leftRearPwmCmd, rightRearPwmCmd );
+                //     }
+                //     obstacleDetection2(requestedSteerAngle,requestedThrottle, reverse, leftRearPwmCmd, rightRearPwmCmd, us_front, us_front_right, us_front_left, us_rear, us_rear_right, us_rear_left);
+                //     //RCLCPP_INFO(this->get_logger(), "Gesture : %s", gesture_name.c_str());
+
+                // } else {
+                //     requestedSteerAngle = 0;
+                //     leftRearPwmCmd = 50;
+                //     rightRearPwmCmd = 50;
+                // }
+
+            //Autonomous Mode
+            } else if (mode==1){
+
+                // Run mode
+                if (car_state == 1) {
+
+                    // Réaction à la perte de l'id du master car le master est sortie du champs de vision de la caméra
+                    if (ai_id != following_id and following_id != -1) {
+                        //RCLCPP_INFO(this->get_logger(), "Master lost!");
+                        following_id = -1; // Aucun id n'est suivi
+                        follow_mode = 1; // Pas de suivi
+                        follow_state = 1; // Looking for a master
+                        leftRearPwmCmd = 50; // Mode de fonctionnement à l'arret
+                        rightRearPwmCmd = 50; // Mode de fonctionnement à l'arret
+                        if (following_state_event == "none") {
+                            following_state_event = "master_lost";
+                        }
+                    }
+
+                    if (following_id == -1) { // Aucun humain n'est le master
+                        //RCLCPP_INFO(this->get_logger(), "Looking for a master...");
+                        follow_state = 1; // Looking for a master
+                        follow_mode = false; // Pas de suivi
+                        leftRearPwmCmd = 50; // Mode de fonctionnement à l'arret
+                        rightRearPwmCmd = 50; // Mode de fonctionnement à l'arret
+                        if (ai_id != -1) {
+                            following_id = ai_id;
+                        } 
+                        if (following_state_event == "none") {
+                            following_state_event = "looking_for_master";
+                        }
+                    } else {
+
+                        if (follow_mode == false) {
+                            follow_state = 2; // Master found, waiting for gestures from the master
+                            //RCLCPP_INFO(this->get_logger(), "Waiting for gestures from the detected master...");
+                            if (following_state_event == "none") {
+                                following_state_event = "waiting_for_gestures";
+                            }
+                        }
+                        
+                        if (gesture_id == following_id) {
+                            if (gesture_name == "Victory") {
+                                follow_mode=false; // On arrête à suivre le master
+                                follow_state = 1; // Master found, waiting for gestures from the master
+                                following_id = -1;
+                                //RCLCPP_INFO(this->get_logger(), "Changing master!");
+                                if (following_state_event == "none") {
+                                    following_state_event = "change_master";
+                                }
+
+                            } else if (gesture_name == "Thumb_Up") {
+                                follow_mode=false; // On met la voiture en STOP
+                                follow_state = 2; // Master found, waiting for gestures from the master
+                                //RCLCPP_INFO(this->get_logger(), "Stop to follow master!");
+                                if (following_state_event == "none") {
+                                    following_state_event = "stop_following";
+                                }
+                            } else if (gesture_name == "Pointing_Up" and follow_mode==false) {
+                                follow_mode=true; // On commence à suivre le master
+                                follow_state = 3; // Follow master
+                                //RCLCPP_INFO(this->get_logger(), "Starting to follow master!");
+                                if (following_state_event == "none") {
+                                    following_state_event = "following_master";
+                                }
+                            }
+                        }
+                    }
+
+                    // Activation du suivi du master avec le booléen follow_mode
+                    if (follow_mode) {
+                        //RCLCPP_INFO(this->get_logger(), "Following master");
                         follow_state = 3; // Follow master
                         leftRearPwmCmd = 80;
                         rightRearPwmCmd = 80;
                         requestedThrottle = 0.8;
+                        past_steering_angle = requestedSteerAngle;
                         requestedSteerAngle = suivreHumain(ai_x, ai_w);
-                        obstacleDetection2(requestedSteerAngle,requestedThrottle, reverse, leftRearPwmCmd, rightRearPwmCmd, us_front, us_front_right, us_front_left, us_rear, us_rear_right, us_rear_left);
+                        if ((requestedSteerAngle - past_steering_angle) > 0.1){
+                            requestedSteerAngle = past_steering_angle + 0.1 ;
+                        }
+                        else if ((requestedSteerAngle - past_steering_angle) < -0.1){
+                            requestedSteerAngle = past_steering_angle - 0.1 ;
+                        }
+                        // On refait une saturation
+                        if (requestedSteerAngle > 1.0) {
+                            requestedSteerAngle = 1.0;
+                        }
+                        else if (requestedSteerAngle < -1.0) {
+                            requestedSteerAngle = -1.0;
+                        }
+                        //obstacleDetection2(requestedSteerAngle,requestedThrottle, reverse, leftRearPwmCmd, rightRearPwmCmd, us_front, us_front_right, us_front_left, us_rear, us_rear_right, us_rear_left);
                     } else {
                         requestedSteerAngle = 0;
                         leftRearPwmCmd = 50;
@@ -400,7 +454,8 @@ private:
         timer+=1;
         if (timer == 20){
             publisher_can_->publish(motorsOrder);
-            //RCLCPP_INFO(this->get_logger(), "Steering angle : %f ", requestedSteerAngle);
+            // RCLCPP_INFO(this->get_logger(), "Steering angle : %f ", requestedSteerAngle);
+            // RCLCPP_INFO(this->get_logger(), "Pos x AI : %d ", ai_x);
             timer = 0;
         }
         
@@ -447,9 +502,13 @@ private:
         } else {
             msg.state = -1;
         }
-
-        //RCLCPP_INFO(this->get_logger(), "Following state event : " + msg.state);
-        publisher_followingStateEvent_->publish(msg);
+        
+        // Only publish when a change occurs to limit subscriber's work
+        if (previous_following_state != msg.state) {
+        	RCLCPP_INFO(this->get_logger(), "Following state event : %i", msg.state);
+        	publisher_followingStateEvent_->publish(msg);
+        	previous_following_state = msg.state;
+        }
     }
 
 
@@ -499,6 +558,7 @@ private:
     //General variables
     bool start;
     int mode;    //0 : Manual    1 : Auto    2 : Calibration
+    int8_t previous_following_state = -10;
 
     
     //Motors feedback variables

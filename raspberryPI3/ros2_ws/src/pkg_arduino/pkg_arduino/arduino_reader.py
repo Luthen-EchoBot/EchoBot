@@ -90,9 +90,7 @@ class ArduinoReader(Node):
             msg.humidity = humidity
 
             self.publisher_.publish(msg)
-            self.get_logger().info(
-                f"Arduino Reader | RFID : {msg.rfid} | Temp : {msg.temp} | Hum : {msg.humidity}"
-            )
+            # self.get_logger().info(f"Arduino Reader | RFID : {msg.rfid} | Temp : {msg.temp} | Hum : {msg.humidity}")
 
         except ValueError:
             self.get_logger().warn(f"Message ignoré : non convertible en int -> '{ligne}'")
