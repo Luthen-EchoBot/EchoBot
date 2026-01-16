@@ -108,7 +108,7 @@ ros2 run my_pkg my_executable
 ```
 rm -rf build/ install/ log/
 colcon build --packages-select interfaces
-colcon build --packages-select can joystick car_control imu_tools system_check imu_filter_madgwick pkg_tcp_receiver pkg_state_control pkg_gui_data_sender
+colcon build --packages-select can joystick car_control imu_tools system_check imu_filter_madgwick pkg_tcp_receiver pkg_state_control pkg_gui_data_sender pkg_arduino
 colcon build --packages-select geicar_start
 source_ws
 ros2 launch geicar_start geicar.launch.py
