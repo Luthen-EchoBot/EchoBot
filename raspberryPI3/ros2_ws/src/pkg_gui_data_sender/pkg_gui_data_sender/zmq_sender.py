@@ -56,6 +56,7 @@ class ZmqSenderNode(Node):
             self.latest_data['humidity'] = data.humidity
 
     def gesture_callback(self, data):
+        # print(f"gui sender recved",data.gesture)
         with self.lock:
             self.latest_data['gesture'] = data.gesture.class_name
 

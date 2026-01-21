@@ -4,10 +4,12 @@ import socket
 import pickle
 import threading
 import time
+import websockets
+import asyncio
 
 from interfaces.msg import AI, BBox, Gesture
 
-import sys  # <--- Needed for the fix
+import sys
 
 ################# EXPRIMENTAL ##############
 # 1. Import the class locally from your package
@@ -26,6 +28,8 @@ class TcpReceiverNode(Node):
         
         # Publisher
         self.publisher_ = self.create_publisher(AI, 'ai_perception_data', 10)
+
+        self.last_msg_sent = AI()
         
         # TCP Configuration
         self.host = '192.168.1.1'
@@ -38,6 +42,10 @@ class TcpReceiverNode(Node):
         self.server_thread = threading.Thread(target=self.tcp_server_loop)
         self.server_thread.daemon = True # Kills thread if main program exits
         self.server_thread.start()
+
+        self.websocket_thread = threading.Thread(target=lambda:asyncio.run(self.websocket_loop()))
+        self.websocket_thread.daemon = True
+        self.websocket_thread.start()
 
     def tcp_server_loop(self):
         """
@@ -65,6 +73,25 @@ class TcpReceiverNode(Node):
                         self.get_logger().info('Client disconnected, listening again...')
                 except OSError:
                     break
+
+    async def websocket_loop(self):
+        num_errors = 0
+        while num_errors<10:
+            try:
+                async with websockets.connect("wss://magictintin.fr/ws") as websocket:
+                    await websocket.send("luthen/main:ping")
+                    await websocket.send("micasend:ping")
+                    while True:
+                        response = await websocket.recv()
+                        self.get_logger().warn(f"Response: {response}")
+                        if response == "👍":
+                            self.last_msg_sent.gesture.class_name = "Thumb_Up"
+                            self.last_msg_sent.gesture.probability = 100.0
+                            self.publisher_.publish(self.last_msg_sent)
+                            self.get_logger().debug(f"Thumb up sent: {self.last_msg_sent}")
+            except Exception as e:
+                num_errors+=1
+                self.get_logger().debug(f"Error({num_errors}/10):",e)
 
     def handle_client(self, conn):
         """
@@ -124,6 +151,7 @@ class TcpReceiverNode(Node):
         msg.boxes = temp_bbox_list
         # --- MAPPING LOGIC END ---
 
+        self.last_msg_sent = msg
         self.publisher_.publish(msg)
         self.get_logger().debug(f'Published AI message with {len(temp_bbox_list)} boxes')
 
