@@ -83,12 +83,12 @@ class TcpReceiverNode(Node):
                     await websocket.send("micasend:ping")
                     while True:
                         response = await websocket.recv()
-                        self.get_logger().warn(f"Response: {response}")
+                        self.get_logger().debug(f"Response: {response}")
                         if response == "👍":
                             self.last_msg_sent.gesture.class_name = "Thumb_Up"
                             self.last_msg_sent.gesture.probability = 100.0
                             self.publisher_.publish(self.last_msg_sent)
-                            self.get_logger().debug(f"Thumb up sent: {self.last_msg_sent}")
+                            self.get_logger().warn(f"Thumb up sent: {self.last_msg_sent}")
             except Exception as e:
                 num_errors+=1
                 self.get_logger().debug(f"Error({num_errors}/10):",e)
