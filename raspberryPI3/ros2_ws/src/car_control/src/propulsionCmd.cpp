@@ -56,22 +56,12 @@ int * obstacleDetection1(float requestedThrottle, bool reverse, uint8_t& leftRea
 }
 
 //Retourne le steering angle pour suivre la personne
-float suivreHumain (int x, int w) {
-/*     float box_centerx = 0.0;
-    box_centerx = float(x)-(float(w)/2.0);
+float suivreHumain (int x, int w, float past_steer_angle) {
 
-    float screen_centerx = 320.0; 
-    float error = - box_centerx + screen_centerx;
-    float error_normalized = error / screen_centerx; */
     float output = 0.0 ;
-
-   /*  if (x>200){
-        output = 0.1;
-    } else if (x<200){
-        output = -0.1;
-    } */
-
     float x_center = 200.0;
+    float alpha = 0.05;
+    float output_filtre = past_steer_angle;
 
     if (x > x_center && x < 2*x_center) {
         output = (float(x)-x_center)/x_center;
@@ -81,19 +71,12 @@ float suivreHumain (int x, int w) {
         output = 1.0;
     }
 
+    output_filtre = alpha * output + (1 - alpha) * output_filtre;
 
-    //float output = - error_normalized + 1.2;
-
-   /*  if (output > 1.0) {
-        output = 1.0;
-    }
-    else if (output < -1.0) {
-        output = -1.0;
-    } */
-    
-    return output ;//;error_normalized
+    return output_filtre ;
 
 }
+
 
 
 

@@ -42,6 +42,7 @@ class ArduinoSender(Node):
             self.get_logger().info(f"Arduino Sender | Connexion établie sur {self.serial_port}")
             return True
         except serial.SerialException:
+            self.get_logger().warn(f"Failed to connect")
             # On ne spamme pas les logs ici, on gérera l'erreur lors de l'envoi
             return False
 
@@ -80,13 +81,14 @@ class ArduinoSender(Node):
 
     def processing_logic(self, ai_x, ai_w):
         screen_width = 640.0 
+        max_angle = 360.0
         obj_center_x = ai_x + (ai_w / 2.0)
-        angle = (obj_center_x / screen_width) * 180.0
+        angle = (obj_center_x / screen_width) * max_angle
 
         if angle < 0:
             angle = 0
-        elif angle > 180:
-            angle = 180
+        elif angle > max_angle:
+            angle = max_angle
             
         return int(angle)
 
@@ -109,10 +111,14 @@ class ArduinoSender(Node):
         ai_x = current_box.x
         ai_w = current_box.w
 
-        # 3. Appel de TA logique de traitement
         valeur_finale = self.processing_logic(ai_x,ai_w)
         # self.get_logger().warn(f"Angle servomoteur : {valeur_finale}", throttle_duration_sec=5.0)
-
+        
+        ## TEMPORARY!!
+        commande = [90,180]
+        time_scale = 5.0
+        ti = int(time.time()/time_scale) % len(commande)
+        valeur_finale = commande[ti]
         # 4. Envoi à l'Arduino
         self.send_to_arduino(valeur_finale)
 
